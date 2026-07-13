@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Zurich Eventos | Hosting, más fácil.</title>
   <meta name="description" content="Renta de mesas y sillas para eventos en Polanco y Anzures. Entrega, montaje y recolección incluidos." />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; require-trusted-types-for 'script'; trusted-types default; upgrade-insecure-requests" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self' https://nyuycifpmojxvnbjsgnr.supabase.co; form-action 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; require-trusted-types-for 'script'; trusted-types default" />
   <meta name="referrer" content="strict-origin-when-cross-origin" />
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -225,7 +225,8 @@
                 <input id="birthday" type="date" />
               </label>
             </div>
-            <p class="micro">Si nos compartes tu cumpleaños, te mandamos una sorpresa durante tu mes de celebración.</p>
+            <p class="micro">Compartir tu cumpleaños es opcional.</p>
+            <label class="checkbox"><input type="checkbox" id="marketingConsent" /> Sí, quiero recibir promociones y una sorpresa durante mi mes de cumpleaños.</label>
             <label>Notas para la entrega
               <textarea id="notes" placeholder="Ej. acceso por caseta, elevador, salón de usos múltiples, contacto en recepción" maxlength="500"></textarea>
             </label>
@@ -236,7 +237,7 @@
             <label class="checkbox"><input type="checkbox" id="acceptTerms" required /> Acepto términos, aviso de privacidad y contrato de renta.</label>
             <div class="form-actions">
               <button type="button" class="ghost" id="previewContractBtn">Ver preview de mi contrato</button>
-              <button type="submit" class="primary">Mock payment · Reservar</button>
+              <button type="submit" class="primary">Reservar mi evento</button>
             </div>
             <p class="micro">El depósito en garantía del 15% se entrega el día del montaje en efectivo, por transferencia o con tarjeta. No se suma al checkout y se devuelve al finalizar el servicio si el mobiliario se entrega completo y en buen estado.</p>
           </fieldset>
@@ -321,6 +322,6 @@
     <div id="adminContent"></div>
   </dialog>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=issue-002-direct-init"></script>
 </body>
 </html>

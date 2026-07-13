@@ -1,11 +1,14 @@
 'use strict';
 
+console.info('Zurich Eventos build ISSUE-002-SUPABASE');
+
 // Zurich Eventos V1 hardening notes:
 // This remains a static prototype. Frontend controls improve safety for demo/testing,
 // but production reservations, Stripe, accounts, admin, and inventory must be enforced server-side.
 const CONFIG = Object.freeze({
-  capacity: Object.freeze({ chairs: 100, tables: 10, auxTables: 10, linens: 10 }),
+  capacity: Object.freeze({ chairs: 100, tables: 10, auxTables: 1, linens: 10 }),
   prices: Object.freeze({ chairUnit: 150, chairPackage: 100, tableUnit: 600, tablePackage: 500, auxTable: 500 }),
+  reservationEndpoint: 'https://nyuycifpmojxvnbjsgnr.supabase.co/functions/v1/create-reservation',
   coverage: Object.freeze(['Polanco', 'Anzures']),
   whatsapp: '525583745123',
   sameDayCode: 'ZURICH-HOY', // Demo only. Move same-day approvals to backend before production.
@@ -15,7 +18,7 @@ const CONFIG = Object.freeze({
   rateLimit: Object.freeze({ key: 'zurichBookingAttempts', max: 5, windowMs: 10 * 60 * 1000 }),
   adminSessionKey: 'zurichAdminUnlocked',
   adminUnlockPhrase: 'ENTIENDO QUE ES DEMO',
-  piiNotice: 'Por seguridad, esta demo no guarda dirección, teléfono, notas ni cumpleaños en el navegador.'
+  piiNotice: 'Los datos de la reservación se procesan en el servidor de Zurich Eventos.'
 });
 
 let activePackage = '10';
@@ -296,7 +299,7 @@ function collectData(preview = false) {
   const totals = calc();
   const eventDate = $('formEventDate').value;
   return {
-    id: preview ? 'ZE-PREVIEW' : `ZE-${new Date().getFullYear()}-${crypto.getRandomValues(new Uint32Array(1))[0].toString(36).toUpperCase().padStart(7, '0')}`,
+    id: 'ZE-PREVIEW',
     eventDate,
     deliveryTime: normalizeText($('deliveryTime').value, 10),
     pickupDate: addDays(eventDate, 1),
@@ -314,8 +317,9 @@ function collectData(preview = false) {
     address: normalizeText($('eventAddress').value, 180),
     neighborhood: normalizeText($('neighborhood').value, 40),
     birthday: $('birthday').value,
+    marketingConsent: Boolean($('marketingConsent')?.checked),
     notes: normalizeText($('notes').value, CONFIG.maxNotesLength),
-    status: 'confirmed_mock',
+    status: 'pending_payment',
     createdAt: new Date().toISOString()
   };
 }
@@ -347,11 +351,71 @@ function validateBooking(data) {
   if (data.linens > CONFIG.capacity.linens) return 'La cantidad de linos supera nuestro inventario total.';
   if (data.birthday && (!isValidDateString(data.birthday) || data.birthday > todayISO())) return 'La fecha de cumpleaños no es válida.';
   if (data.notes.length > CONFIG.maxNotesLength) return 'Las notas de entrega son demasiado largas.';
-  const available = availableFor(data.eventDate);
-  if (data.chairs > available.chairs || data.tables > available.tables || data.auxTables > available.auxTables) return `No hay inventario suficiente para esa fecha. Disponible: ${available.chairs} sillas, ${available.tables} mesas rectangulares y ${available.auxTables} mesas auxiliares.`;
   if (isSameDay(data.eventDate) && normalizeText($('sameDayCode').value, 40) !== CONFIG.sameDayCode) return 'Para reservas del mismo día necesitas el código de confirmación de WhatsApp.';
   if (!$('acceptTerms').checked) return 'Debes aceptar términos, aviso de privacidad y contrato de renta.';
   return null;
+}
+
+
+function buildDateTime(dateStr, timeStr) {
+  if (!isValidDateString(dateStr) || !/^\d{2}:\d{2}$/.test(timeStr || '')) return '';
+  return `${dateStr}T${timeStr}:00-06:00`;
+}
+
+async function callReservationService(payload) {
+  const response = await fetch(CONFIG.reservationEndpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  let result = {};
+  try {
+    result = await response.json();
+  } catch {
+    throw new Error('Zurich no pudo leer la respuesta del servidor.');
+  }
+
+  if (!response.ok) {
+    if (result.error === 'Insufficient inventory') {
+      throw new Error(`No hay inventario suficiente de ${result.item_name || 'ese mobiliario'}. Disponibles: ${result.available ?? 0}.`);
+    }
+    throw new Error(result.message || result.error || 'No pudimos procesar la reservación.');
+  }
+
+  return result;
+}
+
+async function checkAvailabilityRemote(data) {
+  return callReservationService({
+    action: 'check_availability',
+    event_date: data.eventDate,
+    delivery_at: buildDateTime(data.eventDate, data.deliveryTime),
+    pickup_at: buildDateTime(data.pickupDate, data.pickupTime)
+  });
+}
+
+async function createReservationRemote(data) {
+  return callReservationService({
+    action: 'create_reservation',
+    customer: {
+      full_name: data.name,
+      email: data.email,
+      phone: data.phone,
+      birthday: data.birthday || null,
+      marketing_consent: data.marketingConsent
+    },
+    event_date: data.eventDate,
+    event_address: data.address,
+    neighborhood: data.neighborhood,
+    delivery_notes: data.notes || null,
+    delivery_at: buildDateTime(data.eventDate, data.deliveryTime),
+    pickup_at: buildDateTime(data.pickupDate, data.pickupTime),
+    chairs_qty: data.chairs,
+    tables_qty: data.tables,
+    aux_tables_qty: data.auxTables,
+    package_type: data.pricingMode === 'package' ? activePackage : 'custom'
+  });
 }
 
 function renderAdmin() {
@@ -437,15 +501,36 @@ function init() {
   const min = todayISO();
   ['eventDate', 'formEventDate'].forEach((id) => { if ($(id)) $(id).min = min; });
 
-  $('checkAvailabilityBtn').addEventListener('click', () => {
+  $('checkAvailabilityBtn').addEventListener('click', async () => {
     const d = $('eventDate').value;
-    if (!isValidDateString(d)) { setStatus('Elige una fecha válida para revisar disponibilidad.'); return; }
-    const a = availableFor(d);
-    setStatus(a.chairs > 0 && a.tables > 0 ? `Tenemos disponibilidad para hasta ${Math.min(a.chairs, a.tables * 10)} invitados en ${dateFmt(d)}.` : 'Esa fecha ya no tiene inventario suficiente.');
+    if (!isValidDateString(d)) {
+      setStatus('Elige una fecha válida para revisar disponibilidad.');
+      return;
+    }
+
     $('formEventDate').value = d;
     updateTimeOptions();
     calc();
-    location.hash = 'reservar';
+
+    const deliveryTime = $('deliveryTime').value;
+    const pickupTime = $('pickupTime').value;
+
+    if (!deliveryTime || !pickupTime) {
+      setStatus('Por ahora la entrega está disponible viernes, sábado y domingo.');
+      return;
+    }
+
+    setStatus('Revisando inventario real…');
+
+    try {
+      const data = collectData(true);
+      const result = await checkAvailabilityRemote(data);
+      const a = result.available;
+      setStatus(`Disponibilidad real: ${a.chairs} sillas, ${a.tables} mesas rectangulares y ${a.aux_tables} mesa(s) auxiliar(es) para ${dateFmt(d)}.`);
+      location.hash = 'reservar';
+    } catch (error) {
+      setStatus(error.message || 'No pudimos revisar disponibilidad en este momento.');
+    }
   });
 
   $('formEventDate').addEventListener('change', () => { updateTimeOptions(); calc(); });
@@ -457,36 +542,40 @@ function init() {
   $('closeContractBtn').addEventListener('click', () => $('contractDialog').close());
   $('closeSuccessBtn').addEventListener('click', () => $('successDialog').close());
 
-  $('bookingForm').addEventListener('submit', (e) => {
+  $('bookingForm').addEventListener('submit', async (e) => {
     e.preventDefault();
+
     const data = collectData(false);
     const err = validateBooking(data);
-    if (err) { alert(err); return; }
-    const bookings = getBookings();
-    bookings.push({
-      id: data.id,
-      eventDate: data.eventDate,
-      deliveryTime: data.deliveryTime,
-      pickupDate: data.pickupDate,
-      pickupTime: data.pickupTime,
-      chairs: data.chairs,
-      tables: data.tables,
-      auxTables: data.auxTables,
-      pricingMode: data.pricingMode,
-      linens: data.linens,
-      rental: data.rental,
-      deposit: data.deposit,
-      customer: maskName(data.name),
-      email: maskEmail(data.email),
-      status: data.status,
-      createdAt: data.createdAt
-    });
-    setBookings(bookings);
-    clearChildren($('successMessage'));
-    $('successMessage').append('Reservación ', el('strong', { text: data.id }), ' confirmada con mock payment. ', CONFIG.piiNotice, ' En producción aquí se enviará el correo de confirmación con el contrato PDF y se bloqueará inventario después de Stripe.');
-    $('successDialog').showModal();
-    renderAdmin();
-    calc();
+    if (err) {
+      alert(err);
+      return;
+    }
+
+    const submitButton = $('bookingForm').querySelector('button[type="submit"]');
+    const originalLabel = submitButton.textContent;
+    submitButton.disabled = true;
+    submitButton.textContent = 'Procesando reservación…';
+
+    try {
+      const result = await createReservationRemote(data);
+
+      clearChildren($('successMessage'));
+      $('successMessage').append(
+        'Reservación ',
+        el('strong', { text: result.reservation_number }),
+        ' creada correctamente. Total de la reservación: ',
+        el('strong', { text: money(result.total_amount) }),
+        '. La reservación ya fue registrada en Zurich Eventos.'
+      );
+      $('successDialog').showModal();
+      calc();
+    } catch (error) {
+      alert(error.message || 'No pudimos crear la reservación. Intenta nuevamente.');
+    } finally {
+      submitButton.disabled = false;
+      submitButton.textContent = originalLabel;
+    }
   });
 
   $('openAdminBtn').addEventListener('click', openAdmin);
@@ -508,4 +597,4 @@ function init() {
   calc();
 }
 
-document.addEventListener('DOMContentLoaded', init);
+init();
