@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Zurich Eventos | Hosting, más fácil.</title>
+  <meta name="description" content="Renta de mesas y sillas para eventos en Polanco y Anzures. Entrega, montaje y recolección incluidos." />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; require-trusted-types-for 'script'; trusted-types default; upgrade-insecure-requests" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="#top" aria-label="Zurich Eventos inicio">
+      <span class="brand-main">ZURICH</span>
+      <span class="brand-sub">EVENTOS</span>
+    </a>
+    <nav class="nav">
+      <a href="#catalogo">Mobiliario</a>
+      <a href="#nosotros">Nosotros</a>
+      <a href="#como-funciona">Cómo funciona</a>
+      <a href="#garantias">Garantías</a>
+      <a href="#faq">FAQ</a>
+      <button class="ghost small" id="openAdminBtn" type="button">Admin</button>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">Polanco · Anzures · CDMX</p>
+        <h1>Hosting, más fácil.</h1>
+        <p class="lead">Mesas, sillas y montaje para recibir bonito en casa, sin cotizaciones eternas ni estrés de último minuto.</p>
+        <div class="availability-card" id="bookingStart">
+          <label for="eventDate">¿Cuándo es tu evento?</label>
+          <div class="date-row">
+            <input id="eventDate" type="date" />
+            <button class="primary" id="checkAvailabilityBtn">Ver disponibilidad</button>
+          </div>
+          <p class="micro">Reserva en línea. Pago simulado para pruebas. Stripe-ready para la siguiente fase.</p>
+          <p class="status" id="availabilityStatus" aria-live="polite"></p>
+        </div>
+      </div>
+      <div class="hero-image" role="img" aria-label="Mesa elegante para evento"></div>
+    </section>
+
+    <section class="trust-strip" aria-label="Principales garantías">
+      <div><strong>Puntualidad</strong><span>Bonificación de $1,000 si fallamos</span></div>
+      <div><strong>Montaje incluido</strong><span>Lo dejamos listo para recibir</span></div>
+      <div><strong>Precios claros</strong><span>Sabes qué pagas desde el inicio</span></div>
+      <div><strong>Sin sustituciones</strong><span>Recibes exactamente lo reservado</span></div>
+    </section>
+
+    <section class="section" id="catalogo">
+      <div class="section-title">
+        <p class="eyebrow">Piezas para recibir</p>
+        <h2>Hostea con tranquilidad.</h2>
+        <p>Elige un paquete o renta por pieza. Todas nuestras mesas rectangulares incluyen molletón y mantel blanco para mayor comodidad y una presentación impecable.</p>
+      </div>
+      <div class="products">
+        <article class="product-card">
+          <div class="product-gallery" data-gallery aria-label="Galería de Silla Avant Garde">
+            <div class="gallery-track">
+              <img class="gallery-slide active" src="assets/chair-1.webp" alt="Silla Avant Garde color natural con asiento beige, vista frontal" />
+              <img class="gallery-slide" src="assets/chair-2.webp" alt="Silla Avant Garde color natural con asiento beige, vista posterior" loading="lazy" />
+              <img class="gallery-slide" src="assets/chair-3.webp" alt="Detalle de la madera y herrajes de la Silla Avant Garde" loading="lazy" />
+            </div>
+            <button class="gallery-arrow prev" type="button" aria-label="Foto anterior">‹</button>
+            <button class="gallery-arrow next" type="button" aria-label="Foto siguiente">›</button>
+            <div class="gallery-dots" aria-label="Seleccionar fotografía"></div>
+          </div>
+          <div class="product-info"><h3>Silla Avant Garde</h3><p>Acabado natural con asiento beige. Cómoda, cálida y elegante para comidas y celebraciones en casa.</p><strong>$150 MXN por unidad</strong><span>$100 por silla al elegir un paquete · 100 disponibles</span></div>
+        </article>
+        <article class="product-card">
+          <div class="product-gallery" data-gallery aria-label="Galería de Mesa rectangular para 10 personas">
+            <div class="gallery-track">
+              <img class="gallery-slide active" src="assets/table-1.png" alt="Mesa rectangular para diez personas con mantel blanco y follaje" />
+              <img class="gallery-slide" src="assets/table-2.png" alt="Mesa rectangular vestida con mantel blanco en un evento interior" loading="lazy" />
+              <img class="gallery-slide" src="assets/table-3.jpg" alt="Mesa rectangular plegable sin mantel" loading="lazy" />
+            </div>
+            <button class="gallery-arrow prev" type="button" aria-label="Foto anterior">‹</button>
+            <button class="gallery-arrow next" type="button" aria-label="Foto siguiente">›</button>
+            <div class="gallery-dots" aria-label="Seleccionar fotografía"></div>
+          </div>
+          <div class="product-info"><h3>Mesa rectangular para 10 personas</h3><p>Incluye molletón y mantel blanco para una superficie más cómoda, uniforme y bien presentada.</p><strong>$600 MXN por unidad</strong><span>$500 al elegir un paquete · 10 disponibles</span></div>
+        </article>
+        <article class="product-card">
+          <div class="product-gallery" data-gallery aria-label="Galería de Mesa auxiliar de 4 pies">
+            <div class="gallery-track">
+              <img class="gallery-slide active" src="assets/aux-table-1.png" alt="Mesa auxiliar de cuatro pies con mantel blanco usada como estación de bebidas" />
+              <img class="gallery-slide" src="assets/aux-table-2.jpg" alt="Mesa auxiliar plegable de cuatro pies con altura ajustable" loading="lazy" />
+            </div>
+            <button class="gallery-arrow prev" type="button" aria-label="Foto anterior">‹</button>
+            <button class="gallery-arrow next" type="button" aria-label="Foto siguiente">›</button>
+            <div class="gallery-dots" aria-label="Seleccionar fotografía"></div>
+          </div>
+          <div class="product-info"><h3>Mesa auxiliar de 4 pies</h3><p>Altura ajustable. Ideal para estaciones de bebidas, postres, regalos o apoyo durante el servicio.</p><strong>$500 MXN por unidad</strong><span>Disponible únicamente por pieza</span></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section about-section" id="nosotros">
+      <div class="about-grid about-hero-grid">
+        <div>
+          <p class="eyebrow">Nosotros</p>
+          <h2>La tranquilidad también se renta.</h2>
+        </div>
+        <div class="about-copy editorial-card">
+          <p class="story-opener">Zurich Eventos nació porque un proveedor me arruinó una parte muy importante de uno de los días más importantes de mi vida.</p>
+          <p>En marzo de 2026 organicé una comida para celebrar mi décimo aniversario de bodas. Como muchos de nuestros invitados eran mayores de 60 años, para mí era muy importante que estuvieran cómodos. Después de mucho buscar, encontré una empresa que rentaba exactamente el tipo de sillas que necesitaba.</p>
+          <p>La experiencia fue un desastre.</p>
+          <p>Las cotizaciones tardaron días, la comunicación era lenta y, cuando llegué al salón un día antes del evento, habían montado unas sillas completamente distintas a las que había contratado. Al día siguiente llegaron tarde a hacer el cambio, con mala actitud, seguían montando mientras mis invitados comenzaban a llegar y, al terminar, todavía me pidieron propina.</p>
+          <div class="pull-quote">El problema nunca fueron las sillas. Fue la incertidumbre.</div>
+          <p>La falta de comunicación. La sensación de que nadie entendía la importancia que tenía ese evento para mí.</p>
+          <blockquote>¿Cómo sería una empresa de renta de mobiliario diseñada por alguien que también ha estado del otro lado?</blockquote>
+          <p><strong>Zurich Eventos es mi respuesta.</strong></p>
+        </div>
+      </div>
+
+      <div class="philosophy-panel">
+        <p class="eyebrow">Filosofía</p>
+        <h2>Creemos que organizar un evento debe ser sencillo.</h2>
+        <div class="philosophy-copy">
+          <p>Nos encargamos de cada detalle como si el evento fuera nuestro, para que tú puedas concentrarte en lo verdaderamente importante: compartir tiempo de calidad con tus seres queridos.</p>
+          <p>Por eso diseñamos una experiencia donde reservar, recibir y devolver el mobiliario sea tan sencillo que prácticamente desaparezca de tu lista de pendientes.</p>
+          <p>Porque la mejor logística es aquella en la que nunca tienes que pensar.</p>
+        </div>
+      </div>
+
+      <div class="values-section">
+        <div class="section-title compact">
+          <p class="eyebrow">Valores</p>
+          <h2>La forma en que cuidamos cada evento.</h2>
+        </div>
+        <div class="values-grid">
+          <article class="value-card"><span>01</span><h3>Anticipación</h3><p>Nos adelantamos a los problemas.</p></article>
+          <article class="value-card"><span>02</span><h3>Claridad</h3><p>Nunca dejamos al cliente preguntándose qué sigue.</p></article>
+          <article class="value-card"><span>03</span><h3>Puntualidad</h3><p>El tiempo de nuestros clientes merece respeto.</p></article>
+          <article class="value-card"><span>04</span><h3>Cuidado</h3><p>Tratamos cada evento como si fuera propio.</p></article>
+          <article class="value-card featured"><span>05</span><h3>Mejora continua</h3><p>Siempre hay una forma más simple.</p></article>
+        </div>
+      </div>
+
+      <div class="about-cta">
+        <p class="eyebrow">Tranquilidad para recibir</p>
+        <h2>Que el mobiliario sea el pendiente del que puedas olvidarte.</h2>
+        <a class="primary" href="#reservar">Ver disponibilidad</a>
+      </div>
+    </section>
+
+    <section class="booking-shell" id="reservar">
+      <div class="section-title compact">
+        <p class="eyebrow">Reservación</p>
+        <h2>Planea tu evento.</h2>
+        <p>Pedido mínimo: 1 mesa o 10 sillas. Servicio disponible únicamente en Polanco y Anzures.</p>
+      </div>
+
+      <div class="booking-grid">
+        <form id="bookingForm" class="booking-form" autocomplete="on" novalidate>
+          <fieldset>
+            <legend>1. Fecha y horarios</legend>
+            <label>Fecha del evento
+              <input type="date" id="formEventDate" required />
+            </label>
+            <div class="two-col">
+              <label>Entrega
+                <select id="deliveryTime" required></select>
+              </label>
+              <label>Recolección
+                <select id="pickupTime" required></select>
+              </label>
+            </div>
+            <label class="same-day-code hidden" id="sameDayWrap">Código para reservar hoy
+              <input id="sameDayCode" placeholder="Código proporcionado por WhatsApp" autocomplete="off" maxlength="40" />
+            </label>
+          </fieldset>
+
+          <fieldset>
+            <legend>2. Mobiliario</legend>
+            <div class="choice-row">
+              <button type="button" class="choice active" data-package="10">Paquete 10 personas</button>
+              <button type="button" class="choice" data-package="100">Evento completo</button>
+              <button type="button" class="choice" data-package="custom">Personalizado</button>
+            </div>
+            <div class="two-col">
+              <label>Sillas
+                <input type="number" id="chairsQty" min="0" max="100" step="10" value="10" inputmode="numeric" />
+              </label>
+              <label>Mesas rectangulares
+                <input type="number" id="tablesQty" min="0" max="10" step="1" value="1" inputmode="numeric" />
+              </label>
+              <label>Mesas auxiliares de 4 pies
+                <input type="number" id="auxTablesQty" min="0" max="10" step="1" value="0" inputmode="numeric" />
+              </label>
+            </div>
+            <p class="micro">Cada mesa rectangular incluye molletón y mantel blanco. Las mesas auxiliares se rentan únicamente por pieza.</p>
+          </fieldset>
+
+          <fieldset>
+            <legend>3. Tus datos</legend>
+            <div class="two-col">
+              <label>Nombre completo
+                <input id="customerName" required autocomplete="name" maxlength="120" />
+              </label>
+              <label>Teléfono
+                <input id="customerPhone" required autocomplete="tel" inputmode="tel" maxlength="20" />
+              </label>
+            </div>
+            <label>Correo electrónico
+              <input id="customerEmail" type="email" required autocomplete="email" maxlength="254" />
+            </label>
+            <label>Dirección del evento
+              <input id="eventAddress" required placeholder="Calle, número, edificio/departamento" maxlength="180" />
+            </label>
+            <div class="two-col">
+              <label>Colonia
+                <select id="neighborhood" required>
+                  <option value="">Selecciona</option>
+                  <option>Polanco</option>
+                  <option>Anzures</option>
+                  <option>Otra</option>
+                </select>
+              </label>
+              <label>Fecha de cumpleaños <span class="optional">opcional</span>
+                <input id="birthday" type="date" />
+              </label>
+            </div>
+            <p class="micro">Si nos compartes tu cumpleaños, te mandamos una sorpresa durante tu mes de celebración.</p>
+            <label>Notas para la entrega
+              <textarea id="notes" placeholder="Ej. acceso por caseta, elevador, salón de usos múltiples, contacto en recepción" maxlength="500"></textarea>
+            </label>
+          </fieldset>
+
+          <fieldset>
+            <legend>4. Confirmación</legend>
+            <label class="checkbox"><input type="checkbox" id="acceptTerms" required /> Acepto términos, aviso de privacidad y contrato de renta.</label>
+            <div class="form-actions">
+              <button type="button" class="ghost" id="previewContractBtn">Ver preview de mi contrato</button>
+              <button type="submit" class="primary">Mock payment · Reservar</button>
+            </div>
+            <p class="micro">El depósito en garantía del 15% se entrega el día del montaje en efectivo, por transferencia o con tarjeta. No se suma al checkout y se devuelve al finalizar el servicio si el mobiliario se entrega completo y en buen estado.</p>
+          </fieldset>
+        </form>
+
+        <aside class="event-summary">
+          <p class="eyebrow">Tu evento</p>
+          <h3 id="summaryTitle">Paquete 10 personas</h3>
+          <div class="summary-lines" id="summaryLines"></div>
+          <hr />
+          <div class="total-row"><span>Renta</span><strong id="rentalTotal">$1,500</strong></div>
+          <div class="total-row muted"><span>Depósito al entregar (15%)</span><strong id="depositTotal">$225</strong></div>
+          <p class="micro">IVA incluido. Entrega, montaje, recolección y desmontaje incluidos. El depósito no se cobra en el checkout.</p>
+          <a class="whatsapp" id="whatsappLink" target="_blank" rel="noopener noreferrer">¿Dudas? Escríbenos por WhatsApp</a>
+        </aside>
+      </div>
+    </section>
+
+    <section class="section guarantees-section" id="garantias">
+      <div class="section-title">
+        <p class="eyebrow">Nuestras garantías</p>
+        <h2>Confianza, por escrito.</h2>
+        <p>No queremos que tengas que perseguir a un proveedor. Estas son las promesas concretas que respaldan cada reservación.</p>
+      </div>
+      <div class="guarantees-grid">
+        <article class="guarantee-card"><span>01</span><h3>Garantía de puntualidad</h3><p>Si llegamos fuera del horario acordado por una causa atribuible a Zurich Eventos, te bonificamos $1,000 MXN.</p></article>
+        <article class="guarantee-card"><span>02</span><h3>Lo que reservas es lo que recibes</h3><p>No sustituimos mobiliario, color o modelo sin tu autorización previa y expresa.</p></article>
+        <article class="guarantee-card"><span>03</span><h3>Precio transparente</h3><p>Antes de pagar verás el precio total de la renta y todo lo que incluye. El depósito se informa por separado y se entrega el día del montaje.</p></article>
+        <article class="guarantee-card"><span>04</span><h3>Montaje incluido</h3><p>No dejamos el mobiliario en la puerta. Lo colocamos en el espacio acordado, listo para recibir a tus invitados.</p></article>
+        <article class="guarantee-card"><span>05</span><h3>Comunicación clara</h3><p>Recibirás confirmaciones y recordatorios para que siempre sepas qué sigue y a qué hora ocurrirá.</p></article>
+        <article class="guarantee-card"><span>06</span><h3>Depósito sin sorpresas</h3><p>El depósito del 15% se entrega al montar y se devuelve al finalizar el servicio si el mobiliario está completo y en buen estado.</p></article>
+      </div>
+    </section>
+
+    <section class="section split" id="como-funciona">
+      <div><p class="eyebrow">Cómo funciona</p><h2>Reserva en minutos. Recibe sin preocupaciones.</h2></div>
+      <ol class="steps">
+        <li><strong>Elige tu fecha.</strong><span>Te mostramos disponibilidad real para tu evento.</span></li>
+        <li><strong>Arma tu evento.</strong><span>Paquete completo o mobiliario por pieza.</span></li>
+        <li><strong>Reserva y recibe contrato.</strong><span>Tu contrato se llena automáticamente con tus datos.</span></li>
+        <li><strong>Nosotros montamos.</strong><span>Entregamos, acomodamos y recolectamos al día siguiente.</span></li>
+      </ol>
+    </section>
+
+    <section class="section" id="faq">
+      <div class="section-title"><p class="eyebrow">FAQ</p><h2>Preguntas frecuentes</h2></div>
+      <div class="faq-grid">
+        <details open><summary>¿Qué zonas cubren?</summary><p>Por ahora Polanco y Anzures.</p></details>
+        <details><summary>¿Hay costo de entrega?</summary><p>No. Entrega, montaje, recolección y desmontaje están incluidos dentro de la zona de cobertura.</p></details>
+        <details><summary>¿Puedo reservar para hoy?</summary><p>Sí, pero debes escribirnos por WhatsApp. Si confirmamos disponibilidad, te damos un código para completar la reserva.</p></details>
+        <details><summary>¿Qué pasa con el depósito?</summary><p>El depósito es del 15% del total y no se suma al checkout. Se entrega el día del montaje en efectivo, por transferencia o con tarjeta, y se devuelve al finalizar el servicio si todo se entrega completo y en buen estado.</p></details>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div><span class="brand-main">ZURICH</span><span class="brand-sub">EVENTOS</span></div>
+    <p>reservas@zuricheventos.com · WhatsApp 55 8374 5123</p>
+    <p>© 2026 Zurich Eventos. Términos · Aviso de Privacidad</p>
+  </footer>
+
+  <dialog id="contractDialog" class="modal">
+    <button class="x" id="closeContractBtn">×</button>
+    <div id="contractPreview" class="contract-preview"></div>
+    <button class="primary" id="printContractBtn">Imprimir / guardar PDF</button>
+  </dialog>
+
+  <dialog id="successDialog" class="modal small-modal">
+    <h2>Tu evento está reservado.</h2>
+    <p id="successMessage"></p>
+    <button class="primary" id="closeSuccessBtn">Listo</button>
+  </dialog>
+
+  <dialog id="adminDialog" class="modal admin-modal">
+    <button class="x" id="closeAdminBtn">×</button>
+    <h2>Admin Zurich</h2>
+    <p class="micro">Dashboard local para pruebas protegido con clave de sesión. En producción debe vivir en backend con autenticación y rol admin.</p>
+    <div class="admin-actions">
+      <button class="ghost" id="exportBookingsBtn">Exportar JSON</button>
+      <button class="ghost" id="clearBookingsBtn">Limpiar reservas demo</button>
+    </div>
+    <div id="adminContent"></div>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
