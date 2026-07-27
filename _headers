@@ -6,4 +6,4 @@
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()
   Cross-Origin-Opener-Policy: same-origin
   Cross-Origin-Resource-Policy: same-origin
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self' https://nyuycifpmojxvnbjsgnr.supabase.co; form-action 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; require-trusted-types-for 'script'; trusted-types default; upgrade-insecure-requests
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://checkout.stripe.com https://js.stripe.com https://*.js.stripe.com; style-src 'self'; img-src 'self' https://*.stripe.com https://*.link.com; connect-src 'self' https://nyuycifpmojxvnbjsgnr.supabase.co https://checkout.stripe.com https://api.stripe.com https://link.com https://*.link.com; frame-src https://checkout.stripe.com https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://link.com https://*.link.com; form-action 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests

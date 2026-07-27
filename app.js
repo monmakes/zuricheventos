@@ -1,6 +1,6 @@
 'use strict';
 
-console.info('Zurich Eventos build ISSUE-002-SUPABASE');
+console.info('Zurich Eventos build ISSUE-006-PAYMENT-RECOVERY');
 
 // Zurich Eventos V1 hardening notes:
 // This remains a static prototype. Frontend controls improve safety for demo/testing,
@@ -9,6 +9,7 @@ const CONFIG = Object.freeze({
   capacity: Object.freeze({ chairs: 100, tables: 10, auxTables: 1, linens: 10 }),
   prices: Object.freeze({ chairUnit: 150, chairPackage: 100, tableUnit: 600, tablePackage: 500, auxTable: 500 }),
   reservationEndpoint: 'https://nyuycifpmojxvnbjsgnr.supabase.co/functions/v1/create-reservation',
+  checkoutEndpoint: 'https://nyuycifpmojxvnbjsgnr.supabase.co/functions/v1/create-checkout-session',
   coverage: Object.freeze(['Polanco', 'Anzures']),
   whatsapp: '525583745123',
   sameDayCode: 'ZURICH-HOY', // Demo only. Move same-day approvals to backend before production.
@@ -18,10 +19,15 @@ const CONFIG = Object.freeze({
   rateLimit: Object.freeze({ key: 'zurichBookingAttempts', max: 5, windowMs: 10 * 60 * 1000 }),
   adminSessionKey: 'zurichAdminUnlocked',
   adminUnlockPhrase: 'ENTIENDO QUE ES DEMO',
-  piiNotice: 'Los datos de la reservación se procesan en el servidor de Zurich Eventos.'
+  piiNotice: 'Los datos de la reservación se procesan en el servidor de Zurich Eventos.',
+  activeReservationKey: 'zurichActiveReservation'
 });
 
 let activePackage = '10';
+let embeddedCheckout = null;
+let activeReservation = null;
+let holdCountdownTimer = null;
+let holdExpirationInProgress = false;
 
 const $ = (id) => document.getElementById(id);
 const money = (n) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(Number(n) || 0);
@@ -119,6 +125,52 @@ function getBookings() {
 function setBookings(bookings) {
   const safeBookings = Array.isArray(bookings) ? bookings.slice(0, CONFIG.maxLocalBookings).map(sanitizeStoredBooking) : [];
   localStorage.setItem('zurichBookings', JSON.stringify(safeBookings));
+}
+
+
+
+function saveActiveReservation(reservation, customerEmail) {
+  const record = {
+    reservation_id: normalizeText(reservation?.reservation_id, 80),
+    reservation_number: normalizeText(reservation?.reservation_number, 40),
+    customer_email: normalizeEmail(customerEmail),
+    total_amount: Number(reservation?.total_amount) || 0,
+    hold_expires_at: normalizeText(reservation?.hold_expires_at, 50),
+    session_id: normalizeText(reservation?.session_id, 120)
+  };
+
+  if (!record.reservation_id || !record.reservation_number || !record.customer_email) return;
+  localStorage.setItem(CONFIG.activeReservationKey, JSON.stringify(record));
+}
+
+function readActiveReservation() {
+  try {
+    const record = JSON.parse(localStorage.getItem(CONFIG.activeReservationKey) || 'null');
+    if (!record) return null;
+    return {
+      reservation_id: normalizeText(record.reservation_id, 80),
+      reservation_number: normalizeText(record.reservation_number, 40),
+      customer_email: normalizeEmail(record.customer_email),
+      total_amount: Number(record.total_amount) || 0,
+      hold_expires_at: normalizeText(record.hold_expires_at, 50),
+      session_id: normalizeText(record.session_id, 120)
+    };
+  } catch {
+    return null;
+  }
+}
+
+function stopHoldCountdown() {
+  if (holdCountdownTimer) {
+    window.clearInterval(holdCountdownTimer);
+    holdCountdownTimer = null;
+  }
+}
+
+function clearActiveReservation() {
+  stopHoldCountdown();
+  localStorage.removeItem(CONFIG.activeReservationKey);
+  activeReservation = null;
 }
 
 function addDays(dateStr, days) {
@@ -418,6 +470,298 @@ async function createReservationRemote(data) {
   });
 }
 
+
+async function callCheckoutService(payload) {
+  const response = await fetch(CONFIG.checkoutEndpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  let result = {};
+  try {
+    result = await response.json();
+  } catch {
+    throw new Error('Zurich no pudo leer la respuesta de pago.');
+  }
+
+  if (!response.ok) {
+    if (result.error === 'Reservation hold expired') {
+      throw new Error('El apartado de 30 minutos venció. Revisa disponibilidad y vuelve a intentarlo.');
+    }
+    throw new Error(result.message || result.error || 'No pudimos iniciar el pago.');
+  }
+
+  return result;
+}
+
+async function createCheckoutSessionRemote(reservation, data) {
+  return callCheckoutService({
+    action: 'create_checkout_session',
+    reservation_id: reservation.reservation_id,
+    reservation_number: reservation.reservation_number,
+    customer_email: data.email,
+    origin: window.location.origin
+  });
+}
+
+async function getReservationStatusRemote(reservation) {
+  return callCheckoutService({
+    action: 'get_reservation_status',
+    reservation_id: reservation.reservation_id,
+    reservation_number: reservation.reservation_number,
+    customer_email: reservation.customer_email
+  });
+}
+
+async function getCheckoutStatusRemote(sessionId) {
+  return callCheckoutService({
+    action: 'get_session_status',
+    session_id: sessionId
+  });
+}
+
+function formatCountdown(milliseconds) {
+  const totalSeconds = Math.max(0, Math.ceil(milliseconds / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, '0')}`;
+}
+
+function setPaymentCountdownMessage(remainingMs) {
+  const time = formatCountdown(remainingMs);
+  if (remainingMs <= 5 * 60 * 1000) {
+    $('paymentStatus').textContent = `Tu apartado está por vencer · Completa tu pago en ${time}.`;
+    return;
+  }
+  $('paymentStatus').textContent = `Tu mobiliario sigue apartado · Tiempo restante: ${time}.`;
+}
+
+function showExpiredReservationState(reservation) {
+  stopHoldCountdown();
+  holdExpirationInProgress = false;
+
+  if (embeddedCheckout) {
+    embeddedCheckout.destroy();
+    embeddedCheckout = null;
+  }
+
+  clearActiveReservation();
+  $('paymentReservationNumber').textContent = reservation?.reservation_number || '';
+  $('paymentTotal').textContent = money(reservation?.total_amount);
+  $('paymentStatus').textContent = 'Tu apartado terminó. Para mostrarte disponibilidad real, necesitamos revisar nuevamente tu fecha.';
+  $('bookingForm').classList.add('hidden');
+  $('paymentPanel').classList.remove('hidden');
+
+  const checkout = $('checkout');
+  clearChildren(checkout);
+  const availabilityButton = el('button', { class: 'primary', type: 'button', text: 'Ver disponibilidad' });
+  availabilityButton.addEventListener('click', () => {
+    $('paymentPanel').classList.add('hidden');
+    $('bookingForm').classList.remove('hidden');
+    $('bookingStart').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    $('eventDate').focus();
+  });
+  checkout.append(availabilityButton);
+}
+
+async function expireReservationFromCountdown(reservation) {
+  if (holdExpirationInProgress) return;
+  holdExpirationInProgress = true;
+
+  try {
+    await getReservationStatusRemote(reservation);
+  } catch (error) {
+    console.warn('No se pudo confirmar la expiración del apartado.', error);
+  }
+
+  showExpiredReservationState(reservation);
+}
+
+function startHoldCountdown(reservation) {
+  stopHoldCountdown();
+  holdExpirationInProgress = false;
+
+  const expiration = new Date(reservation?.hold_expires_at || '').getTime();
+  if (!Number.isFinite(expiration)) {
+    $('paymentStatus').textContent = 'Tu mobiliario sigue apartado mientras completas el pago.';
+    return;
+  }
+
+  const tick = () => {
+    const remaining = expiration - Date.now();
+    if (remaining <= 0) {
+      stopHoldCountdown();
+      expireReservationFromCountdown(reservation);
+      return;
+    }
+    setPaymentCountdownMessage(remaining);
+  };
+
+  tick();
+  holdCountdownTimer = window.setInterval(tick, 1000);
+}
+
+function showResumePrompt(reservation) {
+  activeReservation = reservation;
+  $('paymentReservationNumber').textContent = reservation.reservation_number;
+  $('paymentTotal').textContent = money(reservation.total_amount);
+  $('bookingForm').classList.add('hidden');
+  $('paymentPanel').classList.remove('hidden');
+  startHoldCountdown(reservation);
+
+  const checkout = $('checkout');
+  clearChildren(checkout);
+  const message = el('p', { text: '¡Ups! Parece que te desconectaste un momento. Tu mobiliario sigue apartado.' });
+  const resumeButton = el('button', { class: 'primary', type: 'button', text: 'Volver a mi pago' });
+  resumeButton.addEventListener('click', async () => {
+    resumeButton.disabled = true;
+    resumeButton.textContent = 'Abriendo tu pago…';
+    try {
+      await mountEmbeddedCheckout(reservation, { email: reservation.customer_email });
+    } catch (error) {
+      $('paymentStatus').textContent = error.message || 'No pudimos reabrir tu pago.';
+      resumeButton.disabled = false;
+      resumeButton.textContent = 'Volver a mi pago';
+    }
+  });
+  checkout.append(message, resumeButton);
+  $('paymentPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function recoverActiveReservation() {
+  const stored = readActiveReservation();
+  if (!stored) return;
+
+  try {
+    const status = await getReservationStatusRemote(stored);
+    const reservation = {
+      ...stored,
+      total_amount: status.total_amount,
+      hold_expires_at: status.hold_expires_at
+    };
+
+    if (!status.active) {
+      if (status.status === 'Confirmado') {
+        showConfirmedReservation(status.reservation_number || stored.reservation_number);
+        clearActiveReservation();
+        return;
+      }
+      showExpiredReservationState(reservation);
+      return;
+    }
+
+    saveActiveReservation(reservation, stored.customer_email);
+    showResumePrompt(reservation);
+  } catch (error) {
+    console.warn('No se pudo recuperar la reservación activa.', error);
+    clearActiveReservation();
+  }
+}
+
+function showConfirmedReservation(reservationNumber) {
+  clearChildren($('successMessage'));
+  $('successMessage').append(
+    'Tu pago fue confirmado. Tu evento ',
+    el('strong', { text: reservationNumber }),
+    ' está confirmado.'
+  );
+  $('successDialog').showModal();
+}
+
+async function handleCheckoutComplete() {
+  if (!activeReservation?.session_id) return;
+
+  stopHoldCountdown();
+  $('paymentStatus').textContent = 'Confirmando el estado de tu pago…';
+
+  try {
+    const status = await getCheckoutStatusRemote(activeReservation.session_id);
+    if (status.payment_status === 'paid' && status.status === 'complete') {
+      $('paymentStatus').textContent = 'Pago confirmado.';
+      showConfirmedReservation(status.reservation_number || activeReservation.reservation_number);
+      clearActiveReservation();
+      if (embeddedCheckout) {
+        embeddedCheckout.destroy();
+        embeddedCheckout = null;
+      }
+      $('paymentPanel').classList.add('hidden');
+      $('bookingForm').classList.remove('hidden');
+      return;
+    }
+
+    if (status.status === 'expired') {
+      showExpiredReservationState(activeReservation);
+      return;
+    }
+
+    $('paymentStatus').textContent = 'No pudimos completar tu pago. Tu apartado sigue vigente y puedes intentarlo nuevamente.';
+    startHoldCountdown(activeReservation);
+  } catch (error) {
+    $('paymentStatus').textContent = error.message || 'No pudimos confirmar el pago todavía.';
+    startHoldCountdown(activeReservation);
+  }
+}
+
+async function mountEmbeddedCheckout(reservation, data) {
+  if (typeof window.Stripe !== 'function') {
+    throw new Error('Stripe no pudo cargar. Recarga la página e inténtalo nuevamente.');
+  }
+
+  const session = await createCheckoutSessionRemote(reservation, data);
+
+  if (embeddedCheckout) {
+    embeddedCheckout.destroy();
+    embeddedCheckout = null;
+  }
+
+  activeReservation = {
+    ...reservation,
+    customer_email: data.email || reservation.customer_email,
+    session_id: session.session_id
+  };
+  saveActiveReservation(activeReservation, activeReservation.customer_email);
+
+  $('paymentReservationNumber').textContent = reservation.reservation_number;
+  $('paymentTotal').textContent = money(reservation.total_amount);
+  $('bookingForm').classList.add('hidden');
+  $('paymentPanel').classList.remove('hidden');
+  startHoldCountdown(activeReservation);
+
+  clearChildren($('checkout'));
+  const stripe = window.Stripe(session.publishable_key);
+  embeddedCheckout = await stripe.createEmbeddedCheckoutPage({
+    fetchClientSecret: async () => session.client_secret,
+    onComplete: handleCheckoutComplete
+  });
+
+  embeddedCheckout.mount('#checkout');
+  $('paymentPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function handleCheckoutReturn() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('checkout') !== 'return' || !params.get('session_id')) return;
+
+  try {
+    const status = await getCheckoutStatusRemote(params.get('session_id'));
+    if (status.payment_status === 'paid' && status.status === 'complete') {
+      showConfirmedReservation(status.reservation_number || 'Zurich Eventos');
+      clearActiveReservation();
+    } else if (status.status === 'expired') {
+      const stored = readActiveReservation();
+      showExpiredReservationState(stored || {
+        reservation_number: status.reservation_number,
+        total_amount: 0
+      });
+    }
+  } catch (error) {
+    console.error('No se pudo verificar el regreso de Stripe.', error);
+  } finally {
+    window.history.replaceState({}, document.title, `${window.location.pathname}${window.location.hash}`);
+  }
+}
+
 function renderAdmin() {
   const content = $('adminContent');
   clearChildren(content);
@@ -555,23 +899,34 @@ function init() {
     const submitButton = $('bookingForm').querySelector('button[type="submit"]');
     const originalLabel = submitButton.textContent;
     submitButton.disabled = true;
-    submitButton.textContent = 'Procesando reservación…';
+    submitButton.textContent = 'Preparando pago seguro…';
 
     try {
-      const result = await createReservationRemote(data);
+      const storedReservation = readActiveReservation();
+      let reservation = null;
 
-      clearChildren($('successMessage'));
-      $('successMessage').append(
-        'Reservación ',
-        el('strong', { text: result.reservation_number }),
-        ' creada correctamente. Total de la reservación: ',
-        el('strong', { text: money(result.total_amount) }),
-        '. La reservación ya fue registrada en Zurich Eventos.'
-      );
-      $('successDialog').showModal();
+      if (storedReservation) {
+        const status = await getReservationStatusRemote(storedReservation);
+        if (status.active) {
+          reservation = {
+            ...storedReservation,
+            total_amount: status.total_amount,
+            hold_expires_at: status.hold_expires_at
+          };
+        } else {
+          clearActiveReservation();
+        }
+      }
+
+      if (!reservation) {
+        reservation = await createReservationRemote(data);
+        saveActiveReservation(reservation, data.email);
+      }
+
+      await mountEmbeddedCheckout(reservation, { email: reservation.customer_email || data.email });
       calc();
     } catch (error) {
-      alert(error.message || 'No pudimos crear la reservación. Intenta nuevamente.');
+      alert(error.message || 'No pudimos preparar el pago. Intenta nuevamente.');
     } finally {
       submitButton.disabled = false;
       submitButton.textContent = originalLabel;
@@ -595,6 +950,8 @@ function init() {
 
   updateTimeOptions();
   calc();
+  handleCheckoutReturn();
+  recoverActiveReservation();
 }
 
 init();
